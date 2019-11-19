@@ -1,0 +1,19 @@
+{
+    "name": "webGL-fun",
+    "main": "js/main.js",
+    "engines": {
+        "node": "12.x",
+        "npm": "*"
+    },
+    "scripts": {
+        "start": "node js/main.js",
+        "compile": "browserify js/main.js > js/bundle.js"
+    },
+    "dependencies": {
+        "brfs": "^2.0.2",
+        "browserify": "^16.5.0",
+        "express": "^4.17.1",
+        "fs": "0.0.1-security",
+        "three": "^0.110.0"
+    }
+}
