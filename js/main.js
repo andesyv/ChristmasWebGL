@@ -1,23 +1,3 @@
-// var Three = require('three');
-// const express = require('express');
-// const app = express();
-// const port = 80;
-//
-// app.use(express.static('public'));
-// app.use(express.static('main.js'));
-//
-// app.get('/', (req, res) => {
-//     // res.send(express.static("index.html"));
-//     res.sendFile(__dirname + "/" + "index.html");
-// });
-//
-// app.listen(port, () => {
-//     console.log("Web app listening on port " + port);
-// });
-// var fs = require('fs');
-//
-// // Vertex shader
-// let vsSource = fs.readFileSync('../shaders/plain.vs', 'utf8');
 const glm = require('./gl-matrix-min.js');
 
 const vsSource = `#version 300 es
@@ -208,44 +188,6 @@ function main()
         1.0, -1.0, 1.0,     0.0, -1.0, 0.0,  0.0, 0.0
     ]);
 
-    let skyboxVertices = new Float32Array([
-         -1.0, -1.0, 1.0,    0, 0, 1,   0, 0,
-         1.0, 1.0, 1.0,      0, 0, 1,   0, 0,
-         1.0, -1.0, 1.0,     0, 0, 1,   0, 0,
-         -1.0, -1.0, 1.0,    0, 0, 1,   0, 0,
-         -1.0, 1.0, 1.0,     0, 0, 1,   0, 0,
-         1.0, 1.0, 1.0,      0, 0, 1,   0, 0,
-         -1.0, -1.0, -1.0,   0, 0, -1,   0, 0,
-         1.0, -1.0, -1.0,    0, 0, -1,   0, 0,
-         1.0, 1.0, -1.0,     0, 0, -1,   0, 0,
-         -1.0, -1.0, -1.0,   0, 0, -1,   0, 0,
-         1.0, 1.0, -1.0,     0, 0, -1,   0, 0,
-         -1.0, 1.0, -1.0,    0, 0, -1,   0, 0,
-         -1.0, 1.0, -1.0,    0, 1, 0,   0, 0,
-         1.0, 1.0, -1.0,     0, 1, 0,   0, 0,
-         1.0, 1.0, 1.0,      0, 1, 0,   0, 0,
-         -1.0, 1.0, -1.0,    0, 1, 0,   0, 0,
-         1.0, 1.0, 1.0,      0, 1, 0,   0, 0,
-         -1.0, 1.0, 1.0,     0, 1, 0,   0, 0,
-         -1.0, -1.0, -1.0,   0, -1, 0,   0, 0,
-         1.0, -1.0, 1.0,     0, -1, 0,   0, 0,
-         1.0, -1.0, -1.0,    0, -1, 0,   0, 0,
-         -1.0, -1.0, -1.0,   0, -1, 0,   0, 0,
-         -1.0, -1.0, 1.0,    0, -1, 0,   0, 0,
-         1.0, -1.0, 1.0,     0, -1, 0,   0, 0,
-         1.0, -1.0, -1.0,    1, 0, 0,   0, 0,
-         1.0, -1.0, 1.0,     1, 0, 0,   0, 0,
-         1.0, 1.0, 1.0,      1, 0, 0,   0, 0,
-         1.0, -1.0, -1.0,    1, 0, 0,   0, 0,
-         1.0, 1.0, 1.0,      1, 0, 0,   0, 0,
-         1.0, 1.0, -1.0,     1, 0, 0,   0, 0,
-         -1.0, -1.0, -1.0,   -1, 0, 0,   0, 0,
-         -1.0, 1.0, 1.0,     -1, 0, 0,   0, 0,
-         -1.0, -1.0, 1.0,    -1, 0, 0,   0, 0,
-         -1.0, -1.0, -1.0,   -1, 0, 0,   0, 0,
-         -1.0, 1.0, -1.0,    -1, 0, 0,   0, 0,
-         -1.0, 1.0, 1.0,     -1, 0, 0,   0, 0
-     ]);
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     // Location, component count, datatype, normalized, stride, offset
@@ -255,12 +197,9 @@ function main()
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 4 * 8, 4 * 6);
 
-    // gl.bindVertexArray(0);
-
     // Matrises:
     let mProjMat = glm.mat4.create();
     glm.mat4.perspective(mProjMat, 45 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100.0);
-    console.log("Perspective: " + glm.mat4.str(mProjMat));
     let mModelMat = glm.mat4.create();
     glm.mat4.translate(mModelMat, mModelMat, [0.0, 0.0, -6.0]);
 
@@ -276,8 +215,6 @@ function main()
         window.requestAnimationFrame(render);
 
         gl.clearColor(Math.sin(incNumber), 0.0, 0.0, 1.0);
-        // glm.mat4.translate(mModelMat, mModelMat, [0.1, 0.0, 0.0]);
-        // glm.mat4.rotate()
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.clearDepth(1.0);
