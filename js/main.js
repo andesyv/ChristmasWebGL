@@ -7,7 +7,8 @@ layout(location = 0) in vec3 inPos;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoords;
 
-uniform mat4 mModelView;
+uniform mat4 mModel;
+uniform mat4 mView;
 uniform mat4 mProjection;
 
 out vec2 texCoords;
@@ -16,7 +17,7 @@ out vec3 normal;
 void main() {
     normal = inNormal;
     texCoords = inTexCoords;
-    gl_Position = mProjection * mModelView * vec4(inPos, 1.0);
+    gl_Position = mProjection * mView * mModel * vec4(inPos, 1.0);
 }
 `;
 //
@@ -57,19 +58,16 @@ function visualObject(gl, vertices)
 
     if (vertices instanceof Float32Array)
     {
-        console.log("It's a float32array!");
         visObj.vertices = vertices;
         visObj.vertexCount = vertices.length / 8;
     }
     else if (Array.isArray(vertices))
     {
-        console.log("It's a normal array!");
         visObj.vertices = new Float32Array(vertices);
         visObj.vertexCount = vertices.length / 8;
     }
     else
     {
-        console.log("It's an object or something..");
         visObj.vertices = (typeof vertices.vertices !== "undefined") ? vertices.vertices : new Float32Array(0);
         visObj.vertexCount = (typeof vertices.vertexCount === "number") ? vertices.vertexCount : 0;
     }
@@ -164,7 +162,8 @@ function main()
             vertexPosition: gl.getAttribLocation(shader, 'inPos')
         },
         uniformLocations: {
-            modelviewMatrix: gl.getUniformLocation(shader, 'mModelView'),
+            modelMatrix: gl.getUniformLocation(shader, 'mModel'),
+            viewMatrix: gl.getUniformLocation(shader, 'mView'),
             projectionMatrix: gl.getUniformLocation(shader, 'mProjection')
         }
     };
@@ -214,16 +213,25 @@ function main()
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
 
+        let radius = -10;
+        let circlePoint = glm.vec3.create();
+        glm.vec3.set(circlePoint, Math.cos(incNumber) * radius, 0, Math.sin(incNumber) * radius);
+
+        var viewMatrix = glm.mat4.create();
+        glm.mat4.lookAt(viewMatrix, circlePoint, [0, 0, 0], [0, 1, 0]);
+
+
         sceneObjects.forEach((visObj, index) => {
             gl.useProgram(shader);
             gl.bindVertexArray(visObj.VAO);
 
             let rot = glm.quat.create();
-            glm.quat.rotateX(rot, rot, incNumber);
-            glm.quat.rotateY(rot, rot, incNumber / 2);
+            // glm.quat.rotateX(rot, rot, incNumber);
+            // glm.quat.rotateY(rot, rot, incNumber / 2);
             let pos = glm.vec3.create();
-            glm.vec3.set(pos, 0.0, 0.0, -6.0);
-            gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelviewMatrix, false, calcModelMat(pos, rot));
+            glm.vec3.set(pos, 0.0, 0.0, 0.0);
+            gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelMatrix, false, calcModelMat(pos, rot));
+            gl.uniformMatrix4fv(shaderInfo.uniformLocations.viewMatrix, false, viewMatrix);
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.projectionMatrix, false, mProjMat);
 
             gl.drawArrays(gl.TRIANGLES, 0, visObj.vertexCount);
