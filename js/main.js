@@ -170,43 +170,57 @@ function main()
 
     let cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
-    glm.mat4.translate(cone.mMatrix, cone.mMatrix, [0, 1, 0]);
+    // glm.mat4.translate(cone.mMatrix, cone.mMatrix, [0, 1, 0]);
+    let rot = glm.quat.create();
+    glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, 0.8, 0], [1.1, 1.1, 1.1]);
     sceneObjects.push(cone);
 
     cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
-    glm.mat4.translate(cone.mMatrix, cone.mMatrix, [0, -1, 0]);
+    glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, -0.1, 0], [1.4, 1.4, 1.4]);
     sceneObjects.push(cone);
+
+    cone = visualObject(gl, geometry.genCone(8));
+    cone.mMatrix = glm.mat4.create();
+    glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, -1, 0], [1.6, 1.6, 1.6]);
+    sceneObjects.push(cone);
+
+    cone = visualObject(gl, geometry.genCone(8));
+    cone.mMatrix = glm.mat4.create();
+    glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, -2, 0], [1.8, 1.8, 1.8]);
+    sceneObjects.push(cone);
+
+
 
     let cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
-    glm.mat4.translate(cube.mMatrix, cube.mMatrix, [0, -3, 0]);
+    glm.quat.rotateY(rot, rot, 1);
+    glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [1, -2.5, 0], [0.9, 0.2, 0.3]);
     sceneObjects.push(cube);
 
-    // sceneObjects = [cone];
+    cube = visualObject(gl, geometry.box);
+    cube.mMatrix = glm.mat4.create();
+    glm.quat.rotateY(rot, rot, -1.2);
+    glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [-1, -2.5, -1.4], [0.7, 0.4, 0.4]);
+    sceneObjects.push(cube);
 
-    // VAO = gl.createVertexArray();
-    // gl.bindVertexArray(VAO);
-    //
-    // var VBO = gl.createBuffer();
-    // gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
-    //
-    // let cone = geometry.genCone(8);
-    //
-    // gl.bufferData(gl.ARRAY_BUFFER, cone.vertices, gl.STATIC_DRAW);
-    // gl.enableVertexAttribArray(0);
-    // // Location, component count, datatype, normalized, stride, offset
-    // gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 4 * 8, 0);
-    // gl.enableVertexAttribArray(1);
-    // gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 8, 4 * 3)
-    // gl.enableVertexAttribArray(2);
-    // gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 4 * 8, 4 * 6);
+    cube = visualObject(gl, geometry.box);
+    cube.mMatrix = glm.mat4.create();
+    glm.quat.rotateY(rot, rot, -0.7);
+    glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [1, -2.5, 1], [0.3, 0.45, 0.5]);
+    sceneObjects.push(cube);
+
+    cube = visualObject(gl, geometry.box);
+    cube.mMatrix = glm.mat4.create();
+    glm.quat.rotateY(rot, rot, 2.4);
+    glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [-0.5, -2.5, 1], [0.6, 0.3, 0.8]);
+    sceneObjects.push(cube);
+
+
 
     // Matrises:
     let mProjMat = glm.mat4.create();
     glm.mat4.perspective(mProjMat, 45 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100.0);
-    let mModelMat = glm.mat4.create();
-    glm.mat4.translate(mModelMat, mModelMat, [0.0, 0.0, -6.0]);
 
 
 
@@ -238,9 +252,6 @@ function main()
             gl.useProgram(shader);
             gl.bindVertexArray(visObj.VAO);
 
-            let rot = glm.quat.create();
-            let pos = glm.vec3.create();
-            glm.vec3.set(pos, 0.0, 0.0, 0.0);
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelMatrix, false, (typeof visObj.mMatrix !== "undefined") ? visObj.mMatrix : glm.mat4.create());
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.viewMatrix, false, viewMatrix);
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.projectionMatrix, false, mProjMat);
@@ -248,13 +259,6 @@ function main()
             gl.drawArrays(gl.TRIANGLES, 0, visObj.vertexCount);
         });
 
-    }
-
-    function calcModelMat(pos, rot, scale)
-    {
-        let mat = glm.mat4.create();
-        glm.mat4.fromRotationTranslation(mat, rot, pos);
-        return mat;
     }
 }
 
