@@ -1,4 +1,5 @@
 const glm = require('./gl-matrix-min.js');
+const geometry = require('./geometry');
 
 const vsSource = `#version 300 es
 
@@ -30,8 +31,9 @@ in vec3 normal;
 out vec4 fragColor;
 
 void main() {
-    // fragColor = vec4(texCoords.x, texCoords.y, 1.0, 1.0);
     fragColor = vec4(texCoords.x, texCoords.y, 0.0, 1.0);
+    vec3 norm = normalize(normal);
+    fragColor = vec4(norm, 1.0);
 }
 `;
 
@@ -44,8 +46,48 @@ else
     alert("Browser doesn't support html5 file reading. :s");
 }
 
+function visualObject(gl, vertices)
+{
+    var visObj = {};
+    visObj.VAO = gl.createVertexArray();
+    gl.bindVertexArray(visObj.VAO);
 
-var VAO;
+    visObj.VBO = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, visObj.VBO);
+
+    if (vertices instanceof Float32Array)
+    {
+        console.log("It's a float32array!");
+        visObj.vertices = vertices;
+        visObj.vertexCount = vertices.length / 8;
+    }
+    else if (Array.isArray(vertices))
+    {
+        console.log("It's a normal array!");
+        visObj.vertices = new Float32Array(vertices);
+        visObj.vertexCount = vertices.length / 8;
+    }
+    else
+    {
+        console.log("It's an object or something..");
+        visObj.vertices = (typeof vertices.vertices !== "undefined") ? vertices.vertices : new Float32Array(0);
+        visObj.vertexCount = (typeof vertices.vertexCount === "number") ? vertices.vertexCount : 0;
+    }
+
+    gl.bufferData(gl.ARRAY_BUFFER, visObj.vertices, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    // Location, component count, datatype, normalized, stride, offset
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 4 * 8, 0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 8, 4 * 3)
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 4 * 8, 4 * 6);
+
+    return visObj;
+}
+
+
+var sceneObjects;
 
 // Script part:
 function main()
@@ -127,75 +169,26 @@ function main()
         }
     };
 
-    VAO = gl.createVertexArray();
-    gl.bindVertexArray(VAO);
+    let cone = visualObject(gl, geometry.genCone(8));
 
-    var VBO = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
-    let vertices = new Float32Array([
-        // x, y, z          // normal       // u, v
-        -1.0, -1.0, 1.0,    0.0, 0.0, 1.0,  0.0, 0.0,
-        1.0, -1.0, 1.0,     0.0, 0.0, 1.0,  1.0, 0.0,
-        1.0, 1.0, 1.0,      0.0, 0.0, 1.0,  1.0, 1.0,
+    sceneObjects = [cone];
 
-        1.0, 1.0, 1.0,      0.0, 0.0, 1.0,  1.0, 1.0,
-        -1.0, 1.0, 1.0,     0.0, 0.0, 1.0,  0.0, 1.0,
-        -1.0, -1.0, 1.0,    0.0, 0.0, 1.0,  0.0, 0.0,
-
-
-        1.0, -1.0, 1.0,     1.0, 0.0, 0.0,  0.0, 0.0,
-        1.0, -1.0, -1.0,    1.0, 0.0, 0.0,  1.0, 0.0,
-        1.0, 1.0, -1.0,     1.0, 0.0, 0.0,  1.0, 1.0,
-
-        1.0, 1.0, -1.0,     1.0, 0.0, 0.0,  1.0, 1.0,
-        1.0, 1.0, 1.0,      1.0, 0.0, 0.0,  0.0, 1.0,
-        1.0, -1.0, 1.0,     1.0, 0.0, 0.0,  0.0, 0.0,
-
-
-        -1.0, 1.0, 1.0,     0.0, 1.0, 0.0,  0.0, 0.0,
-        1.0, 1.0, 1.0,      0.0, 1.0, 0.0,  1.0, 0.0,
-        1.0, 1.0, -1.0,     0.0, 1.0, 0.0,  1.0, 1.0,
-
-        1.0, 1.0, -1.0,     0.0, 1.0, 0.0,  1.0, 1.0,
-        -1.0, 1.0, -1.0,    0.0, 1.0, 0.0,  0.0, 1.0,
-        -1.0, 1.0, 1.0,     0.0, 1.0, 0.0,  0.0, 0.0,
-
-
-        1.0, -1.0, -1.0,    0.0, 0.0, -1.0,  0.0, 0.0,
-        -1.0, -1.0, -1.0,   0.0, 0.0, -1.0,  1.0, 0.0,
-        -1.0, 1.0, -1.0,    0.0, 0.0, -1.0,  1.0, 1.0,
-
-        -1.0, 1.0, -1.0,    0.0, 0.0, -1.0,  1.0, 1.0,
-        1.0, 1.0, -1.0,     0.0, 0.0, -1.0,  0.0, 1.0,
-        1.0, -1.0, -1.0,    0.0, 0.0, -1.0,  0.0, 0.0,
-
-
-        -1.0, -1.0, -1.0,   -1.0, 0.0, 0.0,  0.0, 0.0,
-        -1.0, -1.0, 1.0,    -1.0, 0.0, 0.0,  1.0, 0.0,
-        -1.0, 1.0, 1.0,     -1.0, 0.0, 0.0,  1.0, 1.0,
-
-        -1.0, 1.0, 1.0,     -1.0, 0.0, 0.0,  1.0, 1.0,
-        -1.0, 1.0, -1.0,    -1.0, 0.0, 0.0,  0.0, 1.0,
-        -1.0, -1.0, -1.0,   -1.0, 0.0, 0.0,  0.0, 0.0,
-
-
-        1.0, -1.0, 1.0,     0.0, 1.0, 0.0,  0.0, 0.0,
-        -1.0, -1.0, 1.0,    0.0, 1.0, 0.0,  1.0, 0.0,
-        -1.0, -1.0, -1.0,   0.0, 1.0, 0.0,  1.0, 1.0,
-
-        -1.0, -1.0, -1.0,   0.0, -1.0, 0.0,  1.0, 1.0,
-        1.0, -1.0, -1.0,    0.0, -1.0, 0.0,  0.0, 1.0,
-        1.0, -1.0, 1.0,     0.0, -1.0, 0.0,  0.0, 0.0
-    ]);
-
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    // Location, component count, datatype, normalized, stride, offset
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 4 * 8, 0);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 8, 4 * 3)
-    gl.enableVertexAttribArray(2);
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 4 * 8, 4 * 6);
+    // VAO = gl.createVertexArray();
+    // gl.bindVertexArray(VAO);
+    //
+    // var VBO = gl.createBuffer();
+    // gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
+    //
+    // let cone = geometry.genCone(8);
+    //
+    // gl.bufferData(gl.ARRAY_BUFFER, cone.vertices, gl.STATIC_DRAW);
+    // gl.enableVertexAttribArray(0);
+    // // Location, component count, datatype, normalized, stride, offset
+    // gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 4 * 8, 0);
+    // gl.enableVertexAttribArray(1);
+    // gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 4 * 8, 4 * 3)
+    // gl.enableVertexAttribArray(2);
+    // gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 4 * 8, 4 * 6);
 
     // Matrises:
     let mProjMat = glm.mat4.create();
@@ -221,18 +214,20 @@ function main()
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
 
-        gl.useProgram(shader);
-        gl.bindVertexArray(VAO);
+        sceneObjects.forEach((visObj, index) => {
+            gl.useProgram(shader);
+            gl.bindVertexArray(visObj.VAO);
 
-        let rot = glm.quat.create();
-        glm.quat.rotateX(rot, rot, incNumber);
-        glm.quat.rotateY(rot, rot, incNumber / 2);
-        let pos = glm.vec3.create();
-        glm.vec3.set(pos, 0.0, 0.0, -6.0);
-        gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelviewMatrix, false, calcModelMat(pos, rot));
-        gl.uniformMatrix4fv(shaderInfo.uniformLocations.projectionMatrix, false, mProjMat);
+            let rot = glm.quat.create();
+            glm.quat.rotateX(rot, rot, incNumber);
+            glm.quat.rotateY(rot, rot, incNumber / 2);
+            let pos = glm.vec3.create();
+            glm.vec3.set(pos, 0.0, 0.0, -6.0);
+            gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelviewMatrix, false, calcModelMat(pos, rot));
+            gl.uniformMatrix4fv(shaderInfo.uniformLocations.projectionMatrix, false, mProjMat);
 
-        gl.drawArrays(gl.TRIANGLES, 0, 36);
+            gl.drawArrays(gl.TRIANGLES, 0, visObj.vertexCount);
+        });
 
     }
 
