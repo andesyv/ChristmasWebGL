@@ -85,7 +85,7 @@ function visualObject(gl, vertices)
 }
 
 
-var sceneObjects;
+var sceneObjects = [];
 
 // Script part:
 function main()
@@ -169,8 +169,21 @@ function main()
     };
 
     let cone = visualObject(gl, geometry.genCone(8));
+    cone.mMatrix = glm.mat4.create();
+    glm.mat4.translate(cone.mMatrix, cone.mMatrix, [0, 1, 0]);
+    sceneObjects.push(cone);
 
-    sceneObjects = [cone];
+    cone = visualObject(gl, geometry.genCone(8));
+    cone.mMatrix = glm.mat4.create();
+    glm.mat4.translate(cone.mMatrix, cone.mMatrix, [0, -1, 0]);
+    sceneObjects.push(cone);
+
+    let cube = visualObject(gl, geometry.box);
+    cube.mMatrix = glm.mat4.create();
+    glm.mat4.translate(cube.mMatrix, cube.mMatrix, [0, -3, 0]);
+    sceneObjects.push(cube);
+
+    // sceneObjects = [cone];
 
     // VAO = gl.createVertexArray();
     // gl.bindVertexArray(VAO);
@@ -226,11 +239,9 @@ function main()
             gl.bindVertexArray(visObj.VAO);
 
             let rot = glm.quat.create();
-            // glm.quat.rotateX(rot, rot, incNumber);
-            // glm.quat.rotateY(rot, rot, incNumber / 2);
             let pos = glm.vec3.create();
             glm.vec3.set(pos, 0.0, 0.0, 0.0);
-            gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelMatrix, false, calcModelMat(pos, rot));
+            gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelMatrix, false, (typeof visObj.mMatrix !== "undefined") ? visObj.mMatrix : glm.mat4.create());
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.viewMatrix, false, viewMatrix);
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.projectionMatrix, false, mProjMat);
 
