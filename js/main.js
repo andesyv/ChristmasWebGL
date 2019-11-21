@@ -230,28 +230,28 @@ function main()
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, 1);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [1, -2.5, 0], [0.9, 0.2, 0.3]);
-    cube.material = { "color": [1.0, 0.7, 0.0] };
+    cube.material = { "color": [Math.random(), Math.random(), Math.random()] };
     sceneObjects.push(cube);
 
     cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, -1.2);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [-1, -2.5, -1.4], [0.7, 0.4, 0.4]);
-    cube.material = { "color": [1.0, 0.7, 0.0] };
+    cube.material = { "color": [Math.random(), Math.random(), Math.random()] };
     sceneObjects.push(cube);
 
     cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, -0.7);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [1, -2.5, 1], [0.3, 0.45, 0.5]);
-    cube.material = { "color": [1.0, 0.7, 0.0] };
+    cube.material = { "color": [Math.random(), Math.random(), Math.random()] };
     sceneObjects.push(cube);
 
     cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, 2.4);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [-0.5, -2.5, 1], [0.6, 0.3, 0.8]);
-    cube.material = { "color": [1.0, 0.7, 0.0] };
+    cube.material = { "color": [Math.random(), Math.random(), Math.random()] };
     sceneObjects.push(cube);
 
 
