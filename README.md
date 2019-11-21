@@ -1,4 +1,4 @@
 # ChristmasWebGL
 WebGL with christmas :o
 
-Check it out on github.io: https://andesyv.github.io/ChristmasWebGL/
+Check it out on github pages: https://andesyv.github.io/ChristmasWebGL/
