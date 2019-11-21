@@ -13,11 +13,13 @@ uniform mat4 mProjection;
 
 out vec2 texCoords;
 out vec3 normal;
+out vec3 fragPos;
 
 void main() {
-    normal = inNormal;
+    normal = normalize(mat3(transpose(inverse(mModel))) * inNormal);
     texCoords = inTexCoords;
-    gl_Position = mProjection * mView * mModel * vec4(inPos, 1.0);
+    fragPos = vec3(mModel * vec4(inPos, 1.0));
+    gl_Position = mProjection * mView * vec4(fragPos, 1.0);
 }
 `;
 //
@@ -28,13 +30,41 @@ precision lowp float;
 
 in vec2 texCoords;
 in vec3 normal;
+in vec3 fragPos;
+
+uniform vec3 viewPos;
+uniform vec3 lightPos;
+uniform vec3 lightColor;
+uniform vec3 color;
 
 out vec4 fragColor;
 
+float maxFloat(float a, float b) {
+    if (a < b)
+        return b;
+    else
+        return a;
+}
+
 void main() {
-    fragColor = vec4(texCoords.x, texCoords.y, 0.0, 1.0);
-    vec3 norm = normalize(normal);
-    fragColor = vec4(norm, 1.0);
+    // fragColor = vec4(texCoords.x, texCoords.y, 0.0, 1.0);
+    // vec3 norm = normalize(normal);
+    // fragColor = vec4(norm, 1.0);
+
+
+    // Ambient
+    vec3 ambient = lightColor * 0.15;
+
+    // Diffuse
+    vec3 lightDir = normalize(lightPos - fragPos);
+    vec3 diffuse = lightColor * maxFloat(dot(normal, lightDir), 0.0) * 0.8;
+
+    // Specular
+    vec3 viewDir = normalize(viewPos - fragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    vec3 specular = lightColor * pow(maxFloat(dot(viewDir, reflectDir), 0.0), 16.0) * 0.4;
+
+    fragColor = vec4((ambient + diffuse + specular) * color, 1);
 }
 `;
 
@@ -173,21 +203,25 @@ function main()
     // glm.mat4.translate(cone.mMatrix, cone.mMatrix, [0, 1, 0]);
     let rot = glm.quat.create();
     glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, 0.8, 0], [1.1, 1.1, 1.1]);
+    cone.material = { "color": [0.0, 0.7, 0.0] };
     sceneObjects.push(cone);
 
     cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
     glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, -0.1, 0], [1.4, 1.4, 1.4]);
+    cone.material = { "color": [0.0, 0.7, 0.0] };
     sceneObjects.push(cone);
 
     cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
     glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, -1, 0], [1.6, 1.6, 1.6]);
+    cone.material = { "color": [0.0, 0.7, 0.0] };
     sceneObjects.push(cone);
 
     cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
     glm.mat4.fromRotationTranslationScale(cone.mMatrix, rot, [0, -2, 0], [1.8, 1.8, 1.8]);
+    cone.material = { "color": [0.0, 0.7, 0.0] };
     sceneObjects.push(cone);
 
 
@@ -196,24 +230,28 @@ function main()
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, 1);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [1, -2.5, 0], [0.9, 0.2, 0.3]);
+    cube.material = { "color": [1.0, 0.7, 0.0] };
     sceneObjects.push(cube);
 
     cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, -1.2);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [-1, -2.5, -1.4], [0.7, 0.4, 0.4]);
+    cube.material = { "color": [1.0, 0.7, 0.0] };
     sceneObjects.push(cube);
 
     cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, -0.7);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [1, -2.5, 1], [0.3, 0.45, 0.5]);
+    cube.material = { "color": [1.0, 0.7, 0.0] };
     sceneObjects.push(cube);
 
     cube = visualObject(gl, geometry.box);
     cube.mMatrix = glm.mat4.create();
     glm.quat.rotateY(rot, rot, 2.4);
     glm.mat4.fromRotationTranslationScale(cube.mMatrix, rot, [-0.5, -2.5, 1], [0.6, 0.3, 0.8]);
+    cube.material = { "color": [1.0, 0.7, 0.0] };
     sceneObjects.push(cube);
 
 
@@ -242,7 +280,8 @@ function main()
 
         let radius = -10;
         let circlePoint = glm.vec3.create();
-        glm.vec3.set(circlePoint, Math.cos(incNumber) * radius, 0, Math.sin(incNumber) * radius);
+        let camerapos = [Math.cos(incNumber) * radius, 0, Math.sin(incNumber) * radius];
+        glm.vec3.set(circlePoint, camerapos[0], camerapos[1], camerapos[2]);
 
         var viewMatrix = glm.mat4.create();
         glm.mat4.lookAt(viewMatrix, circlePoint, [0, 0, 0], [0, 1, 0]);
@@ -251,6 +290,14 @@ function main()
         sceneObjects.forEach((visObj, index) => {
             gl.useProgram(shader);
             gl.bindVertexArray(visObj.VAO);
+
+            gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'lightColor'), [1.0, 0.96, 0.91]);
+            gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'lightPos'), [-5, 3, -5]);
+            gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'viewPos'), camerapos);
+            if (typeof visObj.material !== "undefined" && typeof visObj.material.color !== "undefined")
+                gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'color'),  visObj.material.color);
+            else
+                gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'color'),  [0.3, 0.3, 0.3]);
 
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelMatrix, false, (typeof visObj.mMatrix !== "undefined") ? visObj.mMatrix : glm.mat4.create());
             gl.uniformMatrix4fv(shaderInfo.uniformLocations.viewMatrix, false, viewMatrix);
