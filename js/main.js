@@ -271,7 +271,7 @@ function main()
         incNumber += 0.01;
         window.requestAnimationFrame(render);
 
-        gl.clearColor(Math.sin(incNumber), 0.0, 0.0, 1.0);
+        gl.clearColor(0.7, 0.0, 0.0, 1.0);
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.clearDepth(1.0);
