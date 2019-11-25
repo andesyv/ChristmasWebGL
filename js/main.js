@@ -69,7 +69,6 @@ void main() {
 const vsHUD = `#version 300 es
 
 layout(location = 0) in vec3 inPos;
-layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoords;
 
 out vec2 texCoords;
@@ -80,17 +79,33 @@ void main() {
 }`;
 
 const fsHUD = `#version 300 es
-    precision lowp float;
+    precision mediump float;
 
     in vec2 texCoords;
 
+    uniform float time;
+
     out vec4 fragColor;
 
-    void main() {
-        fragColor = vec4(texCoords, 0.0, 1.0);
+    #define M_PI 3.1415926535897932384626433832795
+
+    float rand(float c)
+    {
+        return fract(sin(c) * 43758.5453);
     }
 
-`;
+    float rand(vec2 co)
+    {
+        return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    }
+
+    void main() {
+
+        float alpha = rand(vec2(texCoords.x, texCoords.y + time));
+        alpha = (alpha > 0.98) ? 1.0 : 0.0;
+
+        fragColor = vec4(vec3(alpha), 1.0);
+    }`;
 
 if (window.File && window.FileReader && window.FileList && window.Blob)
 {
@@ -140,6 +155,8 @@ function visualObject(gl, vertices)
 
 
 var sceneObjects = [];
+var timer;
+const startTimer = Date.now();
 
 // Script part:
 function main()
@@ -243,7 +260,12 @@ function main()
     const HUDShader = {
         program: shader,
         uniformLocations: {},
-        setUniforms: (params) => {}
+        setUniforms: (params) => {
+            if (typeof params !== "undefined") {
+                if (typeof params.time !== "undefined")
+                    gl.uniform1f(gl.getUniformLocation(HUDShader.program, 'time'), params.time);
+            }
+        }
     };
 
     let cone = visualObject(gl, geometry.genCone(8));
@@ -317,7 +339,27 @@ function main()
     let mProjMat = glm.mat4.create();
     glm.mat4.perspective(mProjMat, 45 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100.0);
 
+    // Create a framebuffer
+    const snowyTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, snowyTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, snowyTexture, 0);
+
+    timer = Date.now() - startTimer;
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(HUDShader.program);
+    gl.bindVertexArray(screenSquare.VAO)
+    HUDShader.setUniforms({
+        time: timer / 1000
+    });
+    gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
+    // gl.deleteFramebuffer(fb);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     render();
 
@@ -325,12 +367,16 @@ function main()
 
     function render()
     {
+        const deltaTime = ((Date.now() - startTimer) - timer) / 1000;
+        timer = Date.now() - startTimer;
+
         incNumber += 0.01;
         window.requestAnimationFrame(render);
 
+        gl.enable(gl.DEPTH_TEST);
         gl.clearColor(0.7, 0.0, 0.0, 1.0);
 
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         let radius = -10;
         let circlePoint = glm.vec3.create();
@@ -358,6 +404,13 @@ function main()
             gl.drawArrays(gl.TRIANGLES, 0, visObj.vertexCount);
         });
 
+        gl.disable(gl.DEPTH_TEST);
+        gl.useProgram(HUDShader.program);
+        gl.bindVertexArray(screenSquare.VAO)
+        HUDShader.setUniforms({
+            time: timer / 1000
+        });
+        gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
     }
 }
 
