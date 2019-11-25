@@ -165,9 +165,7 @@ void main() {
     gl_Position = mProjection * mView * vec4(fragPos, 1.0);
 }
 `;
-//
-// // Fragment shader
-// let fsSource = fs.readFileSync('../shaders/plain.fs', 'utf8');
+
 const fsSource = `#version 300 es
 precision lowp float;
 
@@ -209,6 +207,32 @@ void main() {
 
     fragColor = vec4((ambient + diffuse + specular) * color, 1);
 }
+`;
+
+const vsHUD = `#version 300 es
+
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inTexCoords;
+
+out vec2 texCoords;
+
+void main() {
+    texCoords = inTexCoords;
+    gl_Position = vec4(inPos, 1.0);
+}`;
+
+const fsHUD = `#version 300 es
+    precision lowp float;
+
+    in vec2 texCoords;
+
+    out vec4 fragColor;
+
+    void main() {
+        fragColor = vec4(texCoords, 0.0, 1.0);
+    }
+
 `;
 
 if (window.File && window.FileReader && window.FileList && window.Blob)
@@ -280,9 +304,12 @@ function main()
 
     gl.cullFace(gl.BACK);
     gl.enable(gl.CULL_FACE);
+    gl.clearDepth(1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     console.log("Canvas width: " + canvas.width + ", canvas height: " + canvas.height);
 
@@ -328,17 +355,38 @@ function main()
         return shader;
     }
 
-    const shader = initShaderProgram(gl, vsSource, fsSource);
-    const shaderInfo = {
+    let shader = initShaderProgram(gl, vsSource, fsSource);
+    const phongShader = {
         program: shader,
-        attribLocations: {
-            vertexPosition: gl.getAttribLocation(shader, 'inPos')
-        },
         uniformLocations: {
             modelMatrix: gl.getUniformLocation(shader, 'mModel'),
             viewMatrix: gl.getUniformLocation(shader, 'mView'),
             projectionMatrix: gl.getUniformLocation(shader, 'mProjection')
+        },
+        setUniforms: (params) => {
+            if (typeof params !== "undefined") {
+                gl.uniform3fv(gl.getUniformLocation(phongShader.program, 'lightColor'), [1.0, 0.96, 0.91]);
+                gl.uniform3fv(gl.getUniformLocation(phongShader.program, 'lightPos'), [-5, 3, -5]);
+                if (typeof params.camerapos !== "undefined")
+                    gl.uniform3fv(gl.getUniformLocation(phongShader.program, 'viewPos'), params.camerapos);
+                if (typeof params.material !== "undefined" && typeof params.material.color !== "undefined")
+                    gl.uniform3fv(gl.getUniformLocation(phongShader.program, 'color'),  params.material.color);
+                else
+                    gl.uniform3fv(gl.getUniformLocation(phongShader.program, 'color'),  [0.3, 0.3, 0.3]);
+
+                gl.uniformMatrix4fv(phongShader.uniformLocations.modelMatrix, false, (typeof params.mMatrix !== "undefined") ? params.mMatrix : glm.mat4.create());
+                gl.uniformMatrix4fv(phongShader.uniformLocations.viewMatrix, false, params.viewMatrix);
+                gl.uniformMatrix4fv(phongShader.uniformLocations.projectionMatrix, false, params.mProjMat);
+            }
         }
+    };
+
+
+    shader = initShaderProgram(gl, vsHUD, fsHUD);
+    const HUDShader = {
+        program: shader,
+        uniformLocations: {},
+        setUniforms: (params) => {}
     };
 
     let cone = visualObject(gl, geometry.genCone(8));
@@ -397,7 +445,16 @@ function main()
     cube.material = { "color": [Math.random(), Math.random(), Math.random()] };
     sceneObjects.push(cube);
 
+    let screenSquare = visualObject(gl, new Float32Array([
+        // x, y, z          // normal           // u, v
+        -1.0, -1.0, 1.0,    0.0, 0.0, 1.0,      0.0, 0.0,
+        1.0, -1.0, 1.0,     0.0, 0.0, 1.0,      1.0, 0.0,
+        1.0, 1.0, 1.0,      0.0, 0.0, 1.0,      1.0, 1.0,
 
+        1.0, 1.0, 1.0,      0.0, 0.0, 1.0,      1.0, 1.0,
+        -1.0, 1.0, 1.0,     0.0, 0.0, 1.0,      0.0, 1.0,
+        -1.0, -1.0, 1.0,    0.0, 0.0, 1.0,      0.0, 0.0
+    ]));
 
     // Matrises:
     let mProjMat = glm.mat4.create();
@@ -417,9 +474,6 @@ function main()
         gl.clearColor(0.7, 0.0, 0.0, 1.0);
 
         gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.clearDepth(1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LEQUAL);
 
         let radius = -10;
         let circlePoint = glm.vec3.create();
@@ -431,20 +485,18 @@ function main()
 
 
         sceneObjects.forEach((visObj, index) => {
-            gl.useProgram(shader);
+            gl.useProgram(phongShader.program);
             gl.bindVertexArray(visObj.VAO);
 
-            gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'lightColor'), [1.0, 0.96, 0.91]);
-            gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'lightPos'), [-5, 3, -5]);
-            gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'viewPos'), camerapos);
-            if (typeof visObj.material !== "undefined" && typeof visObj.material.color !== "undefined")
-                gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'color'),  visObj.material.color);
-            else
-                gl.uniform3fv(gl.getUniformLocation(shaderInfo.program, 'color'),  [0.3, 0.3, 0.3]);
-
-            gl.uniformMatrix4fv(shaderInfo.uniformLocations.modelMatrix, false, (typeof visObj.mMatrix !== "undefined") ? visObj.mMatrix : glm.mat4.create());
-            gl.uniformMatrix4fv(shaderInfo.uniformLocations.viewMatrix, false, viewMatrix);
-            gl.uniformMatrix4fv(shaderInfo.uniformLocations.projectionMatrix, false, mProjMat);
+            phongShader.setUniforms({
+                camerapos: camerapos,
+                material: {
+                    color: visObj.material.color
+                },
+                mMatrix: visObj.mMatrix,
+                viewMatrix: viewMatrix,
+                mProjMat: mProjMat
+            });
 
             gl.drawArrays(gl.TRIANGLES, 0, visObj.vertexCount);
         });
