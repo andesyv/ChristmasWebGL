@@ -66,7 +66,7 @@ void main() {
 }
 `;
 
-const vsHUD = `#version 300 es
+const vsStatic = `#version 300 es
 
 layout(location = 0) in vec3 inPos;
 layout(location = 2) in vec2 inTexCoords;
@@ -78,7 +78,7 @@ void main() {
     gl_Position = vec4(inPos, 1.0);
 }`;
 
-const fsHUD = `#version 300 es
+const fsStatic = `#version 300 es
     precision mediump float;
 
     in vec2 texCoords;
@@ -101,10 +101,40 @@ const fsHUD = `#version 300 es
 
     void main() {
 
-        float alpha = rand(vec2(texCoords.x, texCoords.y + time));
-        alpha = (alpha > 0.98) ? 1.0 : 0.0;
+        float alpha = rand(vec2(texCoords.x, texCoords.y));
+        alpha = (alpha > 0.99) ? 1.0 : 0.0;
 
         fragColor = vec4(vec3(alpha), 1.0);
+    }`;
+
+const fsHUD = `#version 300 es
+    precision mediump float;
+
+    in vec2 texCoords;
+
+    uniform float time;
+    uniform sampler2D tex;
+
+    out vec4 fragColor;
+
+    #define M_PI 3.1415926535897932384626433832795
+
+    float rand(float c)
+    {
+        return fract(sin(c) * 43758.5453);
+    }
+
+    float rand(vec2 co)
+    {
+        return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    }
+
+    void main() {
+        vec2 offset = vec2(sin(time) * 0.1 + texCoords.x, time * 0.1 + texCoords.y);
+        float col = texture(tex, offset).r;
+        if (col < 0.5)
+            discard;
+        fragColor = vec4(vec3(col), 1.0);
     }`;
 
 if (window.File && window.FileReader && window.FileList && window.Blob)
@@ -256,7 +286,19 @@ function main()
     };
 
 
-    shader = initShaderProgram(gl, vsHUD, fsHUD);
+    shader = initShaderProgram(gl, vsStatic, fsStatic);
+    const snowyShader = {
+        program: shader,
+        uniformLocations: {},
+        setUniforms: (params) => {
+            if (typeof params !== "undefined") {
+                if (typeof params.time !== "undefined")
+                    gl.uniform1f(gl.getUniformLocation(snowyShader.program, 'time'), params.time);
+            }
+        }
+    };
+
+    shader = initShaderProgram(gl, vsStatic, fsHUD);
     const HUDShader = {
         program: shader,
         uniformLocations: {},
@@ -264,9 +306,15 @@ function main()
             if (typeof params !== "undefined") {
                 if (typeof params.time !== "undefined")
                     gl.uniform1f(gl.getUniformLocation(HUDShader.program, 'time'), params.time);
+                if (typeof params.texture !== "undefined")
+                {
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, params.texture);
+                    gl.uniform1i(gl.getUniformLocation(HUDShader.program, 'tex'), 0);
+                }
             }
         }
-    };
+    }
 
     let cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
@@ -342,19 +390,28 @@ function main()
     // Create a framebuffer
     const snowyTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, snowyTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.drawingBufferWidth, gl.drawingBufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
     const fb = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, snowyTexture, 0);
+    let status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status != gl.FRAMEBUFFER_COMPLETE)
+        alert("Framebuffer not created successfully with error: " + status);
 
     timer = Date.now() - startTimer;
 
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+    // Draw a picture
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
-    gl.useProgram(HUDShader.program);
-    gl.bindVertexArray(screenSquare.VAO)
-    HUDShader.setUniforms({
+    gl.useProgram(snowyShader.program);
+    gl.bindVertexArray(screenSquare.VAO);
+    snowyShader.setUniforms({
         time: timer / 1000
     });
     gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
@@ -408,7 +465,8 @@ function main()
         gl.useProgram(HUDShader.program);
         gl.bindVertexArray(screenSquare.VAO)
         HUDShader.setUniforms({
-            time: timer / 1000
+            time: timer / 1000,
+            texture: snowyTexture
         });
         gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
     }
