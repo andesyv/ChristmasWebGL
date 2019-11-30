@@ -107,6 +107,32 @@ const fsStatic = `#version 300 es
         fragColor = vec4(vec3(alpha), 1.0);
     }`;
 
+const fsBlur = `#version 300 es
+    precision mediump float;
+
+    in vec2 texCoords;
+
+    uniform sampler2D tex;
+    uniform int n;
+
+    out vec4 fragColor;
+
+    void main() {
+        ivec2 texSize = textureSize(tex, 0);
+
+        vec3 col = vec3(0.0, 0.0, 0.0);
+        for (int x = -1 * n; x < n + 1; ++x)
+        {
+            for (int y = -1; y < n + 1; ++y)
+            {
+                col += texture(tex, vec2(texCoords.x + float(x) / float(texSize.x), texCoords.y + float(y) / float(texSize.y))).rgb;
+            }
+        }
+        col /= float(n * n);
+
+        fragColor = vec4(col, 1.0);
+    }`;
+
 const fsHUD = `#version 300 es
     precision mediump float;
 
@@ -314,7 +340,23 @@ function main()
                 }
             }
         }
-    }
+    };
+
+    shader = initShaderProgram(gl, vsStatic, fsBlur);
+    const blurShader = {
+        program: shader,
+        setUniforms: (params) => {
+            if (typeof params !== "undefined") {
+                if (typeof params.texture !== "undefined") {
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, params.texture);
+                    gl.uniform1i(gl.getUniformLocation(blurShader.program, 'tex'), 0);
+                }
+                if (typeof params.n !== "undefined")
+                    gl.uniform1i(gl.getUniformLocation(blurShader.program, 'n'), params.n);
+            }
+        }
+    };
 
     let cone = visualObject(gl, geometry.genCone(8));
     cone.mMatrix = glm.mat4.create();
@@ -388,25 +430,31 @@ function main()
     glm.mat4.perspective(mProjMat, 45 * Math.PI / 180, canvas.width / canvas.height, 0.1, 100.0);
 
     // Create a framebuffer
-    const snowyTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, snowyTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.drawingBufferWidth, gl.drawingBufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    // (ping pong framebuffer)
+    const fb = [gl.createFramebuffer(), gl.createFramebuffer()];
+    var snowyTexture = [gl.createTexture(), gl.createTexture()];
+    for (i in fb)
+    {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb[i]);
 
-    const fb = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, snowyTexture, 0);
-    let status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    if (status != gl.FRAMEBUFFER_COMPLETE)
-        alert("Framebuffer not created successfully with error: " + status);
+        gl.bindTexture(gl.TEXTURE_2D, snowyTexture[i]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.drawingBufferWidth, gl.drawingBufferHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, snowyTexture[i], 0);
+        let status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if (status != gl.FRAMEBUFFER_COMPLETE)
+            alert("Framebuffer not created successfully with error: " + status);
+    }
 
     timer = Date.now() - startTimer;
 
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb[0]);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
-    // Draw a picture
+    // Draw a picture (from first ping pong framebuffer)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
     gl.useProgram(snowyShader.program);
@@ -415,8 +463,20 @@ function main()
         time: timer / 1000
     });
     gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
+
+    // Draw to other ping pong framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb[1]);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(blurShader.program);
+    blurShader.setUniforms({
+        texture: snowyTexture[0],
+        n: 1
+    });
+    gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
+
     // gl.deleteFramebuffer(fb);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    snowyTexture = snowyTexture[1];
 
     render();
 
