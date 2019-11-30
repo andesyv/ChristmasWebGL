@@ -299,11 +299,12 @@ const fsHUD = `#version 300 es
     }
 
     void main() {
-        vec2 offset = vec2(sin(time) * 0.1 + texCoords.x, time * 0.1 + texCoords.y);
-        float col = texture(tex, offset).r;
-        if (col < 0.5)
-            discard;
-        fragColor = vec4(vec3(col), 1.0);
+        vec2 offset = vec2(sin(time) * 0.02 + texCoords.x + sin(texCoords.y * 10.0 + time) / 100.0, time * 0.1 + texCoords.y);
+        vec2 offset2 = vec2(cos(time) * 0.01 + texCoords.x + sin(texCoords.y * 10.0 + time) * 0.01, time * 0.05 + texCoords.y);
+        float col = texture(tex, offset).r + texture(tex, offset2).r;
+        // if (col < 0.5)
+        //     discard;
+        fragColor = vec4(vec3(col), col * 0.3);
     }`;
 
 if (window.File && window.FileReader && window.FileList && window.Blob)
@@ -613,13 +614,20 @@ function main()
     gl.useProgram(blurShader.program);
     blurShader.setUniforms({
         texture: snowyTexture[0],
-        n: 1
+        n: 2
     });
     gl.drawArrays(gl.TRIANGLES, 0, screenSquare.vertexCount);
 
-    // gl.deleteFramebuffer(fb);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // Cleanup
+    gl.deleteTexture(snowyTexture[0]);
     snowyTexture = snowyTexture[1];
+    gl.deleteFramebuffer(fb[0]);
+    gl.deleteFramebuffer(fb[1]);
+    gl.deleteProgram(blurShader.program);
+    gl.deleteProgram(snowyShader.program);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     render();
 
@@ -663,7 +671,8 @@ function main()
 
             gl.drawArrays(gl.TRIANGLES, 0, visObj.vertexCount);
         });
-
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.disable(gl.DEPTH_TEST);
         gl.useProgram(HUDShader.program);
         gl.bindVertexArray(screenSquare.VAO)
